@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, Blueprint
 from flask_cors import CORS
 from conn.AppConnection import AppConnection
 from auth_router import auth_bp, dummy, login
-from concilia_router import concilia_rest_bp
+from concilia_router import concilia_rest_bp, getAbmCuentasContables
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class AppConciliaRest(AppConnection):
@@ -38,17 +38,18 @@ if __name__ == "__main__":
 
     try:
         with app.app.test_request_context(
-            '/api/login',  # Ruta del endpoint
+            '/concilia/cuentas-contables-abm',  # Ruta del endpoint
             method='POST',  # Método HTTP
             json={  # Datos de prueba
-                "username": "dquiroga",
-                "password": "dario",
-                "username_mail": "darioquiroga@mail.com",
-                "loginType": 1,
-                "clientId": 2
+                "abm": "1",
+                "cuenta": '{id: 0, tipo_cuenta: "2", descripcion: "Dar", plan_cuentas: "46545646546546"}',
+                "id_conciliacion": "1",
+                "id_empresa": 2,
+                "id_usuario": 1,
+                "token": 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZFVzdWFyaW9zIjoxLCJleHAiOjE3NDk5MjcyMzV9.D71pWmuZKVn9AnKy1yT-arD2lOvZvyfd5-UzvKeobVk',
             }
         ):
-            res = login()
+            res = getAbmCuentasContables()
             print(res)
 
     except Exception as e:
