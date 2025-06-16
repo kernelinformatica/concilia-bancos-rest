@@ -434,7 +434,9 @@ def getCuentasContables():
     token = data.get('token')
     userId = data.get('id_usuario')
     clientId = data.get('id_empresa')
-    id_tipo = data.get('id_tipo', 0)  # Por defecto, 0 para todas las cuentas
+    id_tipo = data.get('id_tipo', 0)  # Por defecto, 0 para todos los tipos de cuentas
+    id_cuenta = data.get('id_cuenta', 0)  # Por defecto, 0 para todas las cuentas
+
     if not checkValidityTokenByToken(token, userId):
         return jsonify({
             "control": {
@@ -449,21 +451,37 @@ def getCuentasContables():
     try:
         dbConnection.conn.connect()
         cursor = dbConnection.conn.cursor(dictionary=True)
-        logging.info("-------------------------->"+str(id_tipo))
-        if id_tipo == 0:
-            sql = """ SELECT PlanCuentas.id, PlanCuentas.tipo_cuenta, PlanCuentasTipos.nombre as tipo_cuenta_nombre, PlanCuentas.plan_cuentas, PlanCuentas.descripcion, PlanCuentas.orden 
-FROM PlanCuentas, PlanCuentasTipos WHERE idEmpresa = %s AND PlanCuentas.estado = 1
-and PlanCuentas.tipo_cuenta = PlanCuentasTipos.idTipo order by PlanCuentas.id asc 
-                        """
-            cursor.execute(sql, (clientId,))
-        else:
 
-            sql = """
-            SELECT PlanCuentas.id, PlanCuentas.tipo_cuenta, PlanCuentasTipos.nombre as tipo_cuenta_nombre, PlanCuentas.plan_cuentas, PlanCuentas.descripcion, PlanCuentas.orden 
-FROM PlanCuentas, PlanCuentasTipos WHERE idEmpresa = %s AND PlanCuentas.estado = 1  and  tipo_cuenta = %s
-and PlanCuentas.tipo_cuenta = PlanCuentasTipos.idTipo  ORDER BY orden ASC
-            """
-            cursor.execute(sql, (clientId, id_tipo))
+        if id_tipo == 0:
+
+            if id_cuenta == 0 or id_cuenta is None:
+
+                sql = """ SELECT PlanCuentas.id, PlanCuentas.tipo_cuenta, PlanCuentasTipos.nombre as tipo_cuenta_nombre, PlanCuentas.plan_cuentas, PlanCuentas.descripcion, PlanCuentas.orden 
+                    FROM PlanCuentas, PlanCuentasTipos WHERE idEmpresa = %s AND PlanCuentas.estado = 1
+                    and PlanCuentas.tipo_cuenta = PlanCuentasTipos.idTipo order by PlanCuentasTipos.idTipo, PlanCuentas.id asc """
+                cursor.execute(sql, (clientId,))
+            else:
+
+                sql = """ SELECT PlanCuentas.id, PlanCuentas.tipo_cuenta, PlanCuentasTipos.nombre as tipo_cuenta_nombre, PlanCuentas.plan_cuentas, PlanCuentas.descripcion, PlanCuentas.orden 
+                                    FROM PlanCuentas, PlanCuentasTipos WHERE idEmpresa = %s AND PlanCuentas.estado = 1 and PlanCuentas.id = %s
+                                    and PlanCuentas.tipo_cuenta = PlanCuentasTipos.idTipo order by PlanCuentasTipos.idTipo, PlanCuentas.id asc """
+                cursor.execute(sql, (clientId, id_cuenta,))
+        else:
+            if id_cuenta == 0 or id_cuenta is None:
+                sql = """
+                SELECT PlanCuentas.id, PlanCuentas.tipo_cuenta, PlanCuentasTipos.nombre as tipo_cuenta_nombre, PlanCuentas.plan_cuentas, PlanCuentas.descripcion, PlanCuentas.orden 
+    FROM PlanCuentas, PlanCuentasTipos WHERE idEmpresa = %s AND PlanCuentas.estado = 1  and  tipo_cuenta = %s
+    and PlanCuentas.tipo_cuenta = PlanCuentasTipos.idTipo  ORDER BY orden ASC
+                """
+                cursor.execute(sql, (clientId, id_tipo))
+            else:
+                sql = """SELECT PlanCuentas.id, PlanCuentas.tipo_cuenta, PlanCuentasTipos.nombre as tipo_cuenta_nombre, PlanCuentas.plan_cuentas, PlanCuentas.descripcion, PlanCuentas.orden 
+                    FROM PlanCuentas, PlanCuentasTipos WHERE idEmpresa = %s AND PlanCuentas.estado = 1  and  tipo_cuenta = %s and PlanCuentas.id = %s
+                    and PlanCuentas.tipo_cuenta = PlanCuentasTipos.idTipo  ORDER BY orden ASC
+                                """
+
+                cursor.execute(sql, (clientId, id_tipo, id_cuenta,))
+
         resultados = cursor.fetchall()
         # agregar que traiga los tipos de cuentas y los ponga en el movmientos_tot
         movimientos_tot = [
@@ -595,7 +613,7 @@ def getAbmCuentasContables():
     print("--------------------------------------------------------------------------")
     # Convertir a diccionario
     accion = data.get('abm', 0)  # 1: alta, 2: baja, 3: actualización
-    abm = data.get('abm', 0)  # 1: alta, 2: baja, 3: actualización
+
 
 
 
@@ -622,33 +640,37 @@ def getAbmCuentasContables():
 
     cursor = None
     try:
-        dbConnection.conn.connect()
-        cursor = dbConnection.conn.cursor(dictionary=True)
+
         # recorro el objeto cuenta contable
 
         if cuentaContable:
             tipo_cuenta = cuentaContable.get('tipo_cuenta', 1)
             descripcion = cuentaContable.get('descripcion', None)
             plan_cuentas = cuentaContable.get('plan_cuentas', None)
-
+            id_cuenta = cuentaContable.get('id', 0)
             print(f"Tipo de Cuenta: {tipo_cuenta}")
             print(f"Descripción: {descripcion}")
             print(f"Número de Cuenta: {plan_cuentas}")
+            print(f"Id Cuenta Contable: {id_cuenta}")
         else:
             print("No se encontró el objeto cuentaContable")
 
+
         if accion == 1 or  accion == "1":
+            dbConnection.conn.connect()
+            cursor = dbConnection.conn.cursor(dictionary=True)
             # ANTES DE INSERTAR VERIFICO SI EXISTE LA CUENTA YA CREADA
             sql = """ SELECT COUNT(*)  AS cuenta_existente 
-                    FROM PlanCuentas
-                    WHERE idEmpresa = %s 
-                      AND tipo_cuenta = %s 
-                      AND plan_cuentas = %s
-                    """
+                                        FROM PlanCuentas
+                                        WHERE idEmpresa = %s 
+                                          AND tipo_cuenta = %s 
+                                          AND plan_cuentas = %s
+                                        """
             cursor.execute(sql, (clientId, tipo_cuenta, plan_cuentas))
             resultado = cursor.fetchone()
-            if resultado["cuenta_existente"] > 0:
-                logging.error("La cuenta contable ya existe.")
+            existe = resultado["cuenta_existente"] if resultado else 0
+            if  existe > 0:
+                logging.error("La cuenta contable ya existe, no puede darla de alta")
                 return jsonify({
                     "control": {
                         "control": "ERROR",
@@ -680,25 +702,102 @@ def getAbmCuentasContables():
                             "mensaje": "Error al crear la cuenta contable requerida, inténte nuevamente más tarde."
                         }
                     })
-
-
-
-
         elif accion == 2 or accion == "2":
             logging.info("Borro una cuenta contable.")
+            dbConnection.conn.connect()
+            cursor = dbConnection.conn.cursor(dictionary=True)
+            id_cuenta = cuentaContable.get('id', 0)
+
+            sql = """ SELECT COUNT(*) AS cuenta_existente FROM PlanCuentas  WHERE idEmpresa = %s AND id = %s"""
+            cursor.execute(sql, (clientId, id_cuenta))
+            resultado = cursor.fetchone()
+            existe = resultado["cuenta_existente"] if resultado else 0
+
+            if existe > 0:
+
+                sql = """DELETE FROM PlanCuentas WHERE idEmpresa = %s AND id = %s"""
+                cursor.execute(sql, (clientId, id_cuenta))
+                dbConnection.conn.commit()
+
+
+
+                sql_verify = """SELECT COUNT(*) as cuenta_existente FROM PlanCuentas WHERE idEmpresa = %s AND id = %s"""
+                cursor.execute(sql_verify, (clientId, id_cuenta))
+                resultado = cursor.fetchone()
+                eliminado = resultado["cuenta_existente"] if resultado else 0
+
+                if eliminado == 0:
+                    logging.info("La cuenta contable "+str(plan_cuentas)+" se elimino con éxito.")
+                    return jsonify({
+                        "control": {
+                            "control": "OK",
+                            "codigo": "200",
+                            "mensaje": "La cuenta contable se elimino con éxito."
+                        }
+                    })
+                else:
+                    return jsonify({
+                        "control": {
+                            "control": "ERROR",
+                            "codigo": "400",
+                            "mensaje": "Ocurrió un problema al eliminar la cuenta contable, aún existe."
+                        }
+                    })
+                 # Verificar si el registro sigue existiendo
+
+
+            else:
+
+                return jsonify({
+                    "control": {
+                        "control": "ERROR",
+                        "codigo": "400",
+                        "mensaje": "La cuenta contable "+str(plan_cuentas)+" que intenta eliminar no existe."
+                    }
+                })
         elif accion == 3 or accion == "3":
             logging.info("Actualizo una cuenta contable.")
+            dbConnection.conn.connect()
+            cursor = dbConnection.conn.cursor(dictionary=True)
+            id_cuenta = cuentaContable.get('id', 0)
+            sql = """ SELECT COUNT(*) AS cuenta_existente FROM PlanCuentas  WHERE idEmpresa = %s AND id = %s"""
+            cursor.execute(sql, (clientId, id_cuenta))
+            resultado = cursor.fetchone()
+            existe = resultado["cuenta_existente"] if resultado else 0
+
+            if existe > 0 :
+                sql = """UPDATE PlanCuentas SET descripcion = %s, plan_cuentas = %s WHERE idEmpresa = %s  and id = %s and estado = 1"""
+                cursor.execute(sql, (descripcion,  plan_cuentas, clientId, id_cuenta))
+                dbConnection.conn.commit()
+                if cursor.rowcount > 0:
+                    logging.info("Cuenta contable actualizada correctamente.")
+                    return jsonify({
+                        "control": {
+                            "control": "OK",
+                            "codigo": "200",
+                            "mensaje": "Cuenta contable actualizada correctamente."
+                        }
+                    })
+                else:
+                    logging.error("Ocurrió un problema al actualizar la cuenta contable.")
+                    return jsonify({
+                        "control": {
+                            "control": "ERROR",
+                            "codigo": "400",
+                            "mensaje": "Ocurrió un problema al actualizar la cuenta contable."
+                        }
+                    })
+
         else:
             logging.error("ABM no válido, debe ser 1 (alta), 2 (baja) o 3 (actualización).")
-
-        """return jsonify({
-            "control": {
-                "control": "OK",
-                "codigo": "200" if movimientos_tot else "400",
-                "mensaje": mensaje,
-            },
-            "datos": movimientos_tot
-        })"""
+            return jsonify({
+                "control": {
+                    "control": "ERROR",
+                    "codigo": "400" ,
+                    "mensaje": "ABM no válido, debe ser 1 (alta), 2 (baja) o 3 (actualización).",
+                },
+                "datos":[]
+            })
     except Exception as e:
         logging.error(f"Error al ejecutar el SELECT: {e}")
         return jsonify({
@@ -711,6 +810,112 @@ def getAbmCuentasContables():
         })
     finally:
         close_connection(cursor, dbConnection.conn)
+
+
+
+
+@concilia_rest_bp.route('/traer-parametros', methods=['POST'])
+def getParametros():
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            "control": {
+                "codigo": 400,
+                "estado": "Error",
+                "mensaje": getHttpStatusDescription(400) + " | datos o parámetros no recibidos.",
+            }
+        })
+
+    token = data.get('token')
+    userId = data.get('id_usuario')
+    clientId = data.get('id_empresa')
+    idConcilia = data.get('id_concilia')
+    grupo = data.get('grupo', None)
+    codigo = data.get('codigo', None)
+    nombreParametro = data.get('nombre_parametro', None)
+
+    if not checkValidityTokenByToken(token, userId):
+        return jsonify({
+            "control": {
+                "control": "ERROR",
+                "codigo": 401,
+                "mensaje": "Token inválido o expirado, loguearse nuevamente."
+            },
+            "datos": []
+        })
+
+    cursor = None
+    try:
+        dbConnection.conn.connect()
+        cursor = dbConnection.conn.cursor(dictionary=True)
+        if grupo is None or grupo == "":
+            print("SELECT POR GRUPO")
+            sql = """
+            SELECT * FROM Parametros
+            WHERE idEmpresa = %s AND grupo = %s ORDER BY orden ASC
+            """
+            cursor.execute(sql, (clientId, grupo))
+        elif grupo and nombreParametro:
+            print("SELECT POR GRUPO, CODIGO Y NOMBRE PARAMETRO")
+            sql = """
+            SELECT * FROM Parametros
+            WHERE idEmpresa = %s AND grupo = %s and nombreParametro = %s ORDER BY orden ASC
+            """
+            cursor.execute(sql, (clientId, grupo, nombreParametro))
+        resultados = cursor.fetchall()
+
+        parametros = [
+            {
+                "idParametro": row["idParametro"],
+                "grupo": row["grupo"],
+                "codigo": row["codigo"],
+                "nombreParametro": row["nombreParametro"],
+                "valor": row["valor"],
+
+            }
+            for row in resultados
+        ]
+
+        mensaje = f"Se han encontrado {len(parametros)}." if parametros else "No se encontraron parametros."
+        logging.info(mensaje)
+        return jsonify({
+            "control": {
+                "control": "OK",
+                "codigo": "200",
+                "mensaje": mensaje,
+            },
+            "datos": parametros
+        })
+    except Exception as e:
+        logging.error(f"Error al ejecutar el SELECT: {e}")
+        return jsonify({
+            "control": {
+                "control": "ERROR",
+                "codigo": "500",
+                "mensaje": f"Error al obtener parametros: {str(e)}"
+            },
+            "datos": []
+        })
+    finally:
+        close_connection(cursor, dbConnection.conn)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

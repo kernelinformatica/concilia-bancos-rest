@@ -308,12 +308,12 @@ def getUserInfo(clientId, userId, token):
                 "control" : token,
                 "usuario": userInfo,
                 "empresa": company,
-                "token": token["token"]
+                "token": token
 
 
 
             }
-
+            print("getUserInfo() finalInfo N --------------> " + str(finalInfo))
             # Cierra conexión antes de devolver
             dbConnection.conn.close()
             dbConnection.conn.disconnect()
@@ -348,7 +348,7 @@ def getAccesByGrupo(clientId, groupId, userId):
         dbConnection.conn.connect()
         cursor = dbConnection.conn.cursor(dictionary=True)
 
-        sql = ("select UsuariosMenu.idMenu as id, UsuariosMenu.nombre, UsuariosMenu.idPadre, UsuariosMenu.orden, UsuariosMenu.icono, UsuariosMenu.nombreForm, UsuariosMenuConfig.idMenu from UsuariosMenu, UsuariosMenuConfig where UsuariosMenuConfig.idMenu = UsuariosMenu.idMenu and UsuariosMenu.enUso = 1 and UsuariosMenuConfig.idGrupo = %s and UsuariosMenuConfig.estado= 1 ")
+        sql = ("select UsuariosMenu.idMenu as id, UsuariosMenu.nombre, UsuariosMenu.idPadre, UsuariosMenu.orden, UsuariosMenu.icono, UsuariosMenu.nombreForm, UsuariosMenuConfig.idMenu from UsuariosMenu, UsuariosMenuConfig where UsuariosMenuConfig.idMenu = UsuariosMenu.idMenu and UsuariosMenu.enUso = 1 and UsuariosMenuConfig.idGrupo = %s and UsuariosMenuConfig.estado= 1 order by UsuariosMenu.orden asc")
 
         cursor.execute(sql, (groupId, ))
         menu = cursor.fetchall()
