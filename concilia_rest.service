@@ -1,0 +1,13 @@
+
+[Unit]
+Description=Conciliaciones API Servicio Rest
+After=network.target
+
+[Service]
+User=administrador
+WorkingDirectory=/home/administrador/conciliaciones/concilia-rest
+ExecStart=/home/administrador/.local/bin/gunicorn --workers 3 --bind 0.0.0.0:6010 wsgi:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

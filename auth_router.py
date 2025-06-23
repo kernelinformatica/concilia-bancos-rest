@@ -114,12 +114,14 @@ def login():
                     )
                     if saveTokenAcces(user, token):
                         token_info = {"estado": "Ok", "codigo" : 200, "mensaje": getHttpStatusDescription(200), "token": token, "tokenInicio" : dateStart ,"tokenExpira": dateEndT}
+
                     else:
                         return jsonify({"estado": "Error", "codigo": 406, "mensaje": getHttpStatusDescription(406)})
 
                 else:
 
-
+                    #existe token activo
+                    print("TOKEN EXISTE -------> "+str(checkValidityToken(userId)))
                     token_info = {"estado": "Ok","codigo" : 200, "mensaje": getHttpStatusDescription(200), "token": checkValidityToken(userId)}
 
                 return getUserInfo(clientId, userId, token_info)

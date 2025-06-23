@@ -90,7 +90,7 @@ def getConciliacion():
             "control": {
                 "control": "OK",
                 "codigo": "200",
-                "mensaje": f"Se han encontrado {len(movimientos)} movimientos no conciliados.",
+                "mensaje": f"Se han encontrado {len(movimientos)} movimientos conciliados.",
             },
             "datos": movimientos
         })
