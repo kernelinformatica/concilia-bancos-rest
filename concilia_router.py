@@ -90,7 +90,7 @@ def getConciliacion():
             "control": {
                 "control": "OK",
                 "codigo": "200",
-                "mensaje": f"Se han encontrado {len(movimientos)} movimientos conciliados.",
+                "mensaje": f"Se han encontrado {len(movimientos)} movimientos no conciliados.",
             },
             "datos": movimientos
         })
@@ -901,6 +901,104 @@ def getParametros():
 
 
 
+@concilia_rest_bp.route('/confirmar-conciliacion-final', methods=['POST'])
+def setConfirmarConciliacionFinal():
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            "control": {
+                "codigo": 400,
+                "estado": "Error",
+                "mensaje": getHttpStatusDescription(400) + " | datos o parámetros no recibidos.",
+            }
+        })
+
+    token = data.get('token')
+    userId = data.get('id_usuario')
+    clientId = data.get('id_empresa')
+    idConciliacion = data.get('id_conciliacion')
+    movimientosConciliados  = data.get('movimientos_conciliados')
+
+    if not movimientosConciliados:
+        logging.error(getHttpStatusDescription(400) + " | No se recibieron movimientos para conciliar.")
+        return jsonify({
+            "control": {
+                "codigo": 400,
+                "estado": "Error",
+                "mensaje": getHttpStatusDescription(400) + " | No se recibieron movimientos para conciliar.",
+            }
+        })
+
+
+    if not checkValidityTokenByToken(token, userId):
+        return jsonify({
+            "control": {
+                "control": "ERROR",
+                "codigo": 401,
+                "mensaje": "Token inválido o expirado, loguearse nuevamente."
+            },
+            "datos": []
+        })
+
+    cursor = None
+    try:
+
+        # recorro el objeto cuenta contable
+
+        if not movimientosConciliados:
+            print("No se recibieron movimientos para conciliar")
+            return jsonify({
+                "control": {
+                    "control": "ERROR",
+                    "codigo": 400,
+                    "mensaje": "No se recibieron movimientos para conciliar"
+                },
+
+            })
+
+        else:
+            dbConnection.conn.connect()
+            cursor = dbConnection.conn.cursor(dictionary=True)
+            # HAGO EL  UPDASTE DE CADA MOVMIENTO CONCILIADO POR idMaster
+            print("- Movimientos Conciliados -------------------------------------------------------------------------")
+            print(movimientosConciliados)
+            print("---------------------------------------------------------------------------------------------------")
+            for row in movimientosConciliados:
+                id_master = row["idMaster"]
+
+                asiento_concilia = row["asiento_concilia"]
+                print("---> " + str(id_master)+" | "+str(asiento_concilia))
+                sql = """
+                    UPDATE SisMaster
+                    SET procesado_sn = 'S'
+                    WHERE idMaster = %s and m_asiento_concilia = %s  and estado = 1 and idUsuario = %s
+                """
+                cursor.execute(sql, (id_master, asiento_concilia, userId))
+                dbConnection.conn.commit()
+
+            return jsonify({
+                "control": {
+                    "control": "OK",
+                    "codigo": "200",
+                    "mensaje": "Movimientos conciliados actualizados correctamente."
+                }
+            })
+            cursor.close()
+
+
+
+    except Exception as e:
+        logging.error(f"Error al ejecutar el SELECT: {e}")
+        return jsonify({
+            "control": {
+                "control": "ERROR",
+                "codigo": "500",
+                "mensaje": f"Error intentar procesar la cuenta contable, intente nuevamente más tarde, o póngase en contacto con el administrador del sistema: {str(e)}"
+            },
+            "datos": []
+        })
+    finally:
+        close_connection(cursor, dbConnection.conn)
 
 
 
