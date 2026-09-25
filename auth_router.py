@@ -47,13 +47,13 @@ def login():
         # Extraer parámetros
         username = data.get('username')
         password = data.get('password')
-        clientId = data.get('clientId')
+        clientId =0
 
 
 
 
         # Validar parámetros
-        if username is None or password is None or clientId is None :
+        if username is None or password is None  :
             control = {
                 "codigo": 400,
                 "estado": "Error",
@@ -67,31 +67,9 @@ def login():
             dbConnection.conn.connect()
             cursor = dbConnection.conn.cursor()
 
+            sql = ("SELECT idUsuarios, idGrupo, nombre, apellido, clave, mail, telefono, observaciones, idEmpresa FROM Usuarios  WHERE estado = 1 AND usuario = %s")
 
-            # Construir consulta según loginType
-            """if loginType == 1:  # Login por usuario
-                sql = ("SELECT idUsuarios, idGrupo, nombre, apellido, clave,  mail, "
-                       "telefono, observaciones FROM Usuarios "
-                       "WHERE estado = 1 AND usuario = %s AND idEmpresa = %s")
-                cursor.execute(sql, (username, clientId))
-            elif loginType == 2:  # Login por email
-                sql = ("SELECT idUsuarios, idGrupo, nombre, apellido, clave,  mail, "
-                       "telefono, observaciones FROM Usuarios "
-                       "WHERE estado = 1 AND mail = %s AND idEmpresa = %s")
-                cursor.execute(sql, (usernameMail, clientId))
-            else:
-                control = {
-                    "codigo": 400,
-                    "estado": "Error",
-                    "mensaje": getHttpStatusDescription(400),
-                }
-                return jsonify({"control": control})
-
-            # Recuperar usuario"""
-            sql = ("SELECT idUsuarios, idGrupo, nombre, apellido, clave, mail, "
-                   "telefono, observaciones FROM Usuarios "
-                   "WHERE estado = 1 AND (usuario = %s OR mail = %s) AND idEmpresa = %s")
-            cursor.execute(sql, (username, username, clientId))
+            cursor.execute(sql, (username,))
             user = cursor.fetchone()
 
         finally:
@@ -100,6 +78,7 @@ def login():
 
         if user:
             userId = user[0]
+            clientId = user[8]
             storePasswordHash = user[4]
             hashed_password_md5 = hashlib.md5(password.encode('utf-8')).hexdigest()
             if storePasswordHash == hashed_password_md5:
